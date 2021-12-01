@@ -2,3 +2,12 @@ robot_scale: 0.3302
 
 max_speed: 8.0
 min_speed: 4.0
+
+# raceline path and indices
+wpt_path: '/home/lab/f1tenth_ws/src/Sample-Code/maps/SOCHI.csv'
+wpt_delim: ';'
+wpt_rowskip: 3
+wpt_xind: 1
+wpt_yind: 2
+wpt_thind: 3
+wpt_vind: 5

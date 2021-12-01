@@ -82,13 +82,20 @@ class FgPlanner:
 
 class RosProc:
     def __init__(self):
-
         self.robot_scale = rospy.get_param('robot_scale', 0.3302)
 
         self.pln_params = {
             'max_speed': rospy.get_param('max_speed', 0.5),
             'min_speed': rospy.get_param('min_speed', 0.1),
+            'wpt_path': rospy.get_param('wpt_path', 'waypoints.csv'),
+            'wpt_delim': rospy.get_param('wpt_delim', ','),
+            'wpt_rowskip': rospy.get_param('wpt_rowskip', 0),
+            'wpt_xind': rospy.get_param('wpt_xind', 0),
+            'wpt_yind': rospy.get_param('wpt_yind', 1),
+            'wpt_vind': rospy.get_param('wpt_vind', 2),
+            'wpt_thetind': rospy.get_param('wpt_thetind', 3),
         }
+
         self.planner = FgPlanner(self.pln_params, self.robot_scale)
         self.pub = rospy.Publisher('/drive', AckermannDriveStamped, queue_size=1)
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
@@ -98,8 +105,15 @@ class RosProc:
         self.ackermann.drive.speed = 0.0
         self.ackermann.drive.steering_angle = 0.0
 
-        self.current_speed = 0.0
-        self.current_position = [0.0, 0.0, 0.0]
+        self.scan_data = {'ranges': [0] * 1080}
+        self.odom_data = {
+            'pose_x': 0.0,
+            'pose_y': 0.0,
+            'pose_theta': 0.0,
+            'linear_vels_x': 0.0,
+            'lookahead_distance': 0.82461887897713965,
+            'vgain': 0.90338203837889
+        }
 
     def odom_callback(self, odom_msg):
         qx = odom_msg.pose.pose.orientation.x
@@ -113,13 +127,15 @@ class RosProc:
         current_position_theta = np.arctan2(siny_cosp, cosy_cosp)
         current_position_x = odom_msg.pose.pose.position.x
         current_position_y = odom_msg.pose.pose.position.y
-        self.current_position = [current_position_x, current_position_y, current_position_theta]
 
-        self.current_speed = odom_msg.twist.twist.linear.x
+        self.odom_data['pose_x'] = current_position_x
+        self.odom_data['pose_y'] = current_position_y
+        self.odom_data['pose_theta'] = current_position_theta
+        self.odom_data['linear_vels_x'] = odom_msg.twist.twist.linear.x
 
     def scan_callback(self, scan_msg):
-        scan_data = {'ranges': scan_msg.ranges}
-        speed, steering_angle = self.planner.plan(scan_data, self.current_position)
+        self.scan_data['ranges'] = scan_msg.ranges
+        speed, steering_angle = self.planner.plan(self.scan_data, self.odom_data)
 
         self.ackermann.drive.speed = speed
         self.ackermann.drive.steering_angle = steering_angle
