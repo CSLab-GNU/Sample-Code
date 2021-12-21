@@ -1,0 +1,5 @@
+<launch>
+    <rosparam command="load" file="$(find sample_driving_code)/sim_params.yaml" />
+    <node name="SampleDrivingCode" pkg="sample_driving_code" type="fgm_convolution.py" output="screen">
+    </node>
+</launch>
